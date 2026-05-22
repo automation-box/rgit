@@ -1,0 +1,9 @@
+{
+    "lldb.consoleMode": "commands",
+    "lldb.launch.cwd": "${workspaceFolder}",
+    "lldb.launch.env": {
+        "RUST_BACKTRACE": "1",
+        "RUST_LIB_BACKTRACE": "1"
+    },
+    "lldb.launch.terminal": "integrated"
+}

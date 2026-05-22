@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug rgit",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": [
+                    "run",
+                    "--bin=rgit"
+                ],
+                "problemMatcher": "$codelldb-rustc"
+            },
+            "args": []
+        },
+        {
+            "name": "Debug rgit tests",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--bin=rgit"
+                ],
+                "problemMatcher": "$codelldb-rustc"
+            }
+        }
+    ]
+}

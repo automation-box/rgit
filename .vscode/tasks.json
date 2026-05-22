@@ -1,0 +1,40 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "cargo build",
+            "type": "process",
+            "command": "cargo",
+            "args": [
+                "build"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$codelldb-rustc"
+        },
+        {
+            "label": "cargo run",
+            "type": "process",
+            "command": "cargo",
+            "args": [
+                "run"
+            ],
+            "problemMatcher": "$codelldb-rustc"
+        },
+        {
+            "label": "cargo test",
+            "type": "process",
+            "command": "cargo",
+            "args": [
+                "test"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": "$codelldb-rustc"
+        }
+    ]
+}
