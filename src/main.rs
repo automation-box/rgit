@@ -15,7 +15,7 @@ fn main() {
     let mut args_iter = env::args();
     args_iter.next();
 
-    while let Some(arg) = args_iter.next() {
+    for arg in args_iter {
         match arg.as_str() {
             "init" => {
                 println!("Initializing repository...")
