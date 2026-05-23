@@ -12,7 +12,7 @@
                 ],
                 "problemMatcher": "$codelldb-rustc"
             },
-            "args": []
+            "args": ["init"]
         },
         {
             "name": "Debug rgit tests",
