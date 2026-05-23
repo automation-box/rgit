@@ -13,6 +13,8 @@ fn main() {
 
     // Turn arguments into an iterator
     let mut args_iter = env::args();
+
+    // Skip binary path
     args_iter.next();
 
     for arg in args_iter {
