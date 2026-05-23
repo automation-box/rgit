@@ -1,6 +1,8 @@
+// src/main.rs
 use std::env;
 
 fn main() {
-    let config = rgit::parse_args(env::args());
+    // env::args() satisfies IntoIterator, io::stdout() satisfies Write
+    let config = rgit::parse_args(env::args(), std::io::stdout());
     println!("Config successfully loaded: {:?}", config);
 }

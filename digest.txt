@@ -1,0 +1,128 @@
+Directory structure:
+└── rgit/
+    ├── Cargo.toml
+    ├── src/
+    │   ├── lib.rs
+    │   └── main.rs
+    └── tests/
+        └── cli_tests.rs
+
+================================================
+FILE: Cargo.toml
+================================================
+[package]
+name = "rgit"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+
+
+================================================
+FILE: src/lib.rs
+================================================
+use std::io::Write;
+
+#[derive(Debug, PartialEq)]
+pub struct CliConfig {
+    pub positional_args: Vec<String>,
+}
+
+// Accepts any iterator over String-like items, and any writer for output
+pub fn parse_args<I, W>(args: I, mut writer: W) -> CliConfig
+where
+    I: IntoIterator<Item = String>,
+    W: Write,
+{
+    let mut config = CliConfig {
+        positional_args: Vec::new(),
+    };
+
+    let mut args_iter = args.into_iter();
+    // Skip binary path
+    args_iter.next();
+
+    for arg in args_iter {
+        match arg.as_str() {
+            "init" => {
+                // Using writeln! instead of println! allows us to capture this in tests
+                writeln!(writer, "Initializing repository...").unwrap();
+            }
+            "-h" | "--help" => {
+                writeln!(writer, "Rgit is mock implementation of git in Rust").unwrap();
+                writeln!(writer, "Usage [FLAGS] [ARGS]").unwrap();
+            }
+            // Save everything else as regular positional arguments
+            positional => config.positional_args.push(positional.to_string()),
+        }
+    }
+
+    config
+}
+
+
+
+================================================
+FILE: src/main.rs
+================================================
+// src/main.rs
+use std::env;
+
+fn main() {
+    // env::args() satisfies IntoIterator, io::stdout() satisfies Write
+    let config = rgit::parse_args(env::args(), std::io::stdout());
+    println!("Config successfully loaded: {:?}", config);
+}
+
+
+
+================================================
+FILE: tests/cli_tests.rs
+================================================
+use rgit::parse_args;
+
+#[test]
+fn test_init_command_behavior() {
+    // 1. Setup our mock CLI arguments
+    // Remember: index 0 is always the binary path, index 1 is our actual command
+    let args = vec!["rgit".to_string(), "init".to_string()];
+
+    // 2. Setup an empty byte vector to act as our mock terminal output
+    let mut output_buffer = Vec::new();
+
+    // 3. Run the function
+    let config = parse_args(args, &mut output_buffer);
+
+    // 4. TEST 1: Check that it prints "Initializing repository..."
+    let output_string = String::from_utf8(output_buffer).unwrap();
+    assert_eq!(output_string, "Initializing repository...\n");
+
+    // 5. TEST 2: Check that "init" was NOT added to positional_args
+    // It should be completely empty because "init" matched the specific command branch
+    assert!(
+        config.positional_args.is_empty(),
+        "Expected positional_args to be empty, but found: {:?}",
+        config.positional_args
+    );
+}
+
+#[test]
+fn test_positional_arguments_are_captured() {
+    // Verify that actual positional arguments are still captured correctly
+    let args = vec![
+        "rgit".to_string(),
+        "some_file.txt".to_string(),
+        "another_file.rs".to_string(),
+    ];
+    let mut buffer = Vec::new();
+
+    let config = parse_args(args, &mut buffer);
+
+    // Ensure they are captured, while 'init' is not present
+    assert_eq!(config.positional_args.len(), 2);
+    assert_eq!(config.positional_args[0], "some_file.txt");
+    assert_eq!(config.positional_args[1], "another_file.rs");
+}
+
+

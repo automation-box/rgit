@@ -1,32 +1,44 @@
-use std::env;
+use std::io::Write;
 
-#[derive(Debug, PartialEq)]
+/// Represents the evaluated command-line state for the application.
+#[derive(Debug, PartialEq, Eq)]
 pub struct CliConfig {
     pub positional_args: Vec<String>,
 }
 
-pub fn parse_args(args: env::Args) -> CliConfig {
-    let mut config = CliConfig {
-        positional_args: Vec::new(),
-    };
+/// Parses command-line arguments and handles immediate side-effects like printing help.
+///
+/// # Arguments
+/// * `args` - An iterator yielding the command-line tokens (including the binary name).
+/// * `writer` - Any output stream implementing `Write` where command feedback is sent.
+pub fn parse_args<I, W>(args: I, mut writer: W) -> CliConfig
+where
+    I: IntoIterator<Item = String>,
+    W: Write,
+{
+    let mut args_iter = args.into_iter();
 
-    // Skip binary path
-    let mut args_iter = args;
+    // Hint to the vector how much memory to allocate up front to minimize reallocations
+    let size_hint = args_iter.by_ref().size_hint().0;
+    let mut positional_args = Vec::with_capacity(size_hint);
+
+    // Skip the executable path (always the first element in CLI args)
     args_iter.next();
 
     for arg in args_iter {
         match arg.as_str() {
             "init" => {
-                println!("Initializing repository...");
+                writeln!(writer, "Initializing repository...").unwrap();
             }
             "-h" | "--help" => {
-                println!("Rgit is mock implementation of git in Rust");
-                println!("Usage [FLAGS] [ARGS]");
+                writeln!(writer, "Rgit is mock implementation of git in Rust").unwrap();
+                writeln!(writer, "Usage [FLAGS] [ARGS]").unwrap();
             }
-            // Save everything else as regular positional arguments
-            positional => config.positional_args.push(positional.to_string()),
+            positional => {
+                positional_args.push(positional.to_string());
+            }
         }
     }
 
-    config
+    CliConfig { positional_args }
 }
