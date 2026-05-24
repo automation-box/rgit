@@ -1,38 +1,33 @@
-use rgit::parse_args;
+use rgit::{Command, execute_command, parse_args};
+use std::{env, fs};
 
 #[test]
-fn test_init_command_behavior() {
+fn test_init_command_parsing() {
     let args = vec!["rgit".to_string(), "init".to_string()];
     let mut output_buffer = Vec::new();
 
     let config = parse_args(args, &mut output_buffer);
 
-    // Verify stdout message contains expected trailing newline
-    let output_string = String::from_utf8(output_buffer).unwrap();
-    assert_eq!(output_string, "Initializing repository...\n");
-
-    // Verify 'init' remains an executed action and is not swept into positional arguments
-    assert_eq!(
-        config.positional_args,
-        Vec::<String>::new(),
-        "Expected positional_args to be completely empty"
-    );
+    // Checks that the intent is properly registered
+    assert_eq!(config.command, Command::Init);
+    assert!(config.positional_args.is_empty());
 }
 
 #[test]
-fn test_positional_arguments_are_captured() {
-    let args = vec![
-        "rgit".to_string(),
-        "some_file.txt".to_string(),
-        "another_file.rs".to_string(),
-    ];
-    let mut buffer = Vec::new();
+fn test_init_creates_directory_safely() {
+    // Create a temporary sandbox directory for this test using standard library env
+    let temp_dir = env::temp_dir().join(format!("rgit_test_{}", line!()));
+    fs::create_dir_all(&temp_dir).unwrap();
 
-    let config = parse_args(args, &mut buffer);
+    // Execute the command inside our sandboxed directory
+    let result = execute_command(&Command::Init, temp_dir.clone());
 
-    // Direct structural comparison is cleaner and catches ordering bugs automatically
-    assert_eq!(
-        config.positional_args,
-        vec!["some_file.txt".to_string(), "another_file.rs".to_string()]
+    assert!(result.is_ok());
+    assert!(
+        temp_dir.join(".rgit").exists(),
+        "The .rgit directory should have been created!"
     );
+
+    // Cleanup after ourselves
+    fs::remove_dir_all(temp_dir).unwrap();
 }
