@@ -22,25 +22,23 @@ pub fn parse_args<I>(args: I) -> CliConfig
 where
     I: IntoIterator<Item = String>,
 {
-    let mut args_iter = args.into_iter();
-    args_iter.next(); // Skip executable path
+    // Skip the executable path and collect into a working vector
+    let args: Vec<String> = args.into_iter().skip(1).collect();
 
-    let mut positional_args = Vec::new();
-    let mut command = Command::None;
+    // Ergonomic Match Expression: Directly assign the command by looking for keywords
+    let command = if args.contains(&"init".to_string()) {
+        Command::Init
+    } else if args.iter().any(|arg| arg == "-h" || arg == "--help") {
+        Command::Help
+    } else {
+        Command::None
+    };
 
-    for arg in args_iter {
-        match arg.as_str() {
-            "init" => {
-                command = Command::Init;
-            }
-            "-h" | "--help" => {
-                command = Command::Help;
-            }
-            positional => {
-                positional_args.push(positional.to_string());
-            }
-        }
-    }
+    // Filter out the commands/flags to leave purely positional arguments
+    let positional_args = args
+        .into_iter()
+        .filter(|arg| arg != "init" && arg != "-h" && arg != "--help")
+        .collect();
 
     CliConfig {
         command,
