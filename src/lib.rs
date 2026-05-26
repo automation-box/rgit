@@ -22,23 +22,20 @@ pub fn parse_args<I>(args: I) -> CliConfig
 where
     I: IntoIterator<Item = String>,
 {
-    // Skip the executable path and collect into a working vector
-    let args: Vec<String> = args.into_iter().skip(1).collect();
+    let mut args = args.into_iter();
+    args.next(); // Skip executable path
 
-    // Ergonomic Match Expression: Directly assign the command by looking for keywords
-    let command = if args.contains(&"init".to_string()) {
-        Command::Init
-    } else if args.iter().any(|arg| arg == "-h" || arg == "--help") {
-        Command::Help
-    } else {
-        Command::None
-    };
+    let mut command = Command::None;
+    let mut positional_args = Vec::new();
 
-    // Filter out the commands/flags to leave purely positional arguments
-    let positional_args = args
-        .into_iter()
-        .filter(|arg| arg != "init" && arg != "-h" && arg != "--help")
-        .collect();
+    // Single-pass parse loop
+    for arg in args {
+        match arg.as_str() {
+            "init" => command = Command::Init,
+            "-h" | "--help" => command = Command::Help,
+            _ => positional_args.push(arg),
+        }
+    }
 
     CliConfig {
         command,
@@ -47,7 +44,7 @@ where
 }
 
 /// Handles UI feedback and actual execution.
-/// Accepting a writer allows us to test the console output of commands if needed!
+/// Accepting a writer allows us to test the console output of commands if needed
 pub fn execute_command<W>(command: &Command, base_dir: PathBuf, mut writer: W) -> io::Result<()>
 where
     W: Write,
