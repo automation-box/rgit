@@ -4,23 +4,23 @@ use std::{env, fs};
 #[test]
 fn test_init_command_parsing() {
     let args = vec!["rgit".to_string(), "init".to_string()];
-    let mut output_buffer = Vec::new();
 
-    let config = parse_args(args, &mut output_buffer);
+    // Look mom, no writer required!
+    let config = parse_args(args);
 
-    // Checks that the intent is properly registered
     assert_eq!(config.command, Command::Init);
     assert!(config.positional_args.is_empty());
 }
 
 #[test]
 fn test_init_creates_directory_safely() {
-    // Create a temporary sandbox directory for this test using standard library env
     let temp_dir = env::temp_dir().join(format!("rgit_test_{}", line!()));
     fs::create_dir_all(&temp_dir).unwrap();
 
-    // Execute the command inside our sandboxed directory
-    let result = execute_command(&Command::Init, temp_dir.clone());
+    // We pass a dummy vector to capture output if we care to assert against it,
+    // or just to satisfy the function signature.
+    let mut output_sink = Vec::new();
+    let result = execute_command(&Command::Init, temp_dir.clone(), &mut output_sink);
 
     assert!(result.is_ok());
     assert!(
@@ -28,6 +28,5 @@ fn test_init_creates_directory_safely() {
         "The .rgit directory should have been created!"
     );
 
-    // Cleanup after ourselves
     fs::remove_dir_all(temp_dir).unwrap();
 }
