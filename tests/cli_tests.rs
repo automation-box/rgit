@@ -1,11 +1,9 @@
 use rgit::{Command, execute_command, parse_args};
-use std::{env, fs};
 
 #[test]
 fn test_init_command_parsing() {
     let args = vec!["rgit".to_string(), "init".to_string()];
 
-    // Look mom, no writer required!
     let config = parse_args(args);
 
     assert_eq!(config.command, Command::Init);
@@ -13,20 +11,31 @@ fn test_init_command_parsing() {
 }
 
 #[test]
-fn test_init_creates_directory_safely() {
-    let temp_dir = env::temp_dir().join(format!("rgit_test_{}", line!()));
-    fs::create_dir_all(&temp_dir).unwrap();
+fn test_help_command_parsing() {
+    let args = vec!["rgit".to_string(), "--help".to_string()];
 
-    // We pass a dummy vector to capture output if we care to assert against it,
-    // or just to satisfy the function signature.
-    let mut output_sink = Vec::new();
-    let result = execute_command(&Command::Init, temp_dir.clone(), &mut output_sink);
+    let config = parse_args(args);
 
+    assert_eq!(config.command, Command::Help);
+}
+#[test]
+fn test_init_creates_repository_structure() {
+    // 1. Create a securely isolated temporary directory.
+    //    This automatically deletes itself from your OS when `temp_dir` goes out of scope!
+    let temp_dir = tempfile::tempdir().unwrap();
+    let base_path = temp_dir.path();
+
+    let mut output = Vec::new();
+
+    // 2. Execute the command against our safe RAII-managed path
+    let result = execute_command(&Command::Init, base_path, &mut output);
+
+    // 3. Assertions
     assert!(result.is_ok());
-    assert!(
-        temp_dir.join(".rgit").exists(),
-        "The .rgit directory should have been created!"
-    );
+    assert!(base_path.join(".rgit").exists());
+    assert!(base_path.join(".rgit/objects").exists());
+    assert!(base_path.join(".rgit/refs").exists());
 
-    fs::remove_dir_all(temp_dir).unwrap();
+    let output_str = String::from_utf8(output).unwrap();
+    assert!(output_str.contains("Initializing repository"));
 }

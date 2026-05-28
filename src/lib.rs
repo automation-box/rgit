@@ -1,6 +1,7 @@
+use std::fs;
 use std::io::{self, Write};
-use std::path::PathBuf;
-use std::{env, fs};
+use std::path::{Path, PathBuf};
+use thiserror::Error;
 
 /// The distinct actions rgit can take.
 #[derive(Debug, PartialEq, Eq)]
@@ -17,18 +18,40 @@ pub struct CliConfig {
     pub positional_args: Vec<String>,
 }
 
+/// Top-level application errors.
+#[derive(Debug, Error)]
+pub enum RgitError {
+    #[error("directory already exists")]
+    DirectoryAlreadyExists,
+
+    #[error("not enough permissions")]
+    PermissionDenied,
+
+    #[error("storage failure at {path:?}")]
+    StorageFailure {
+        path: PathBuf,
+
+        #[source]
+        source: io::Error,
+    },
+
+    #[error(transparent)]
+    Io(#[from] io::Error),
+}
+
 /// Purely parses arguments into a configuration struct without side-effects.
 pub fn parse_args<I>(args: I) -> CliConfig
 where
     I: IntoIterator<Item = String>,
 {
     let mut args = args.into_iter();
-    args.next(); // Skip executable path
+
+    // Skip executable path
+    args.next();
 
     let mut command = Command::None;
     let mut positional_args = Vec::new();
 
-    // Single-pass parse loop
     for arg in args {
         match arg.as_str() {
             "init" => command = Command::Init,
@@ -43,27 +66,52 @@ where
     }
 }
 
-/// Handles UI feedback and actual execution.
-/// Accepting a writer allows us to test the console output of commands if needed
-pub fn execute_command<W>(command: &Command, mut writer: W) -> io::Result<()>
+/// Handles command execution and UI output.
+///
+/// `base_dir` is injected for deterministic behavior and easier testing.
+pub fn execute_command<W>(
+    command: &Command,
+    base_dir: &Path,
+    mut writer: W,
+) -> Result<(), RgitError>
 where
     W: Write,
 {
-    let base_dir = env::current_dir().unwrap_or_default();
     match command {
         Command::Init => {
             writeln!(writer, "Initializing repository...")?;
+
             let rgit_dir = base_dir.join(".rgit");
 
-            fs::create_dir(&rgit_dir)?;
-            fs::create_dir(&rgit_dir.join("objects"))?;
-            fs::create_dir(&rgit_dir.join("refs"))?;
+            ensure_directory_exists(&rgit_dir)?;
+            ensure_directory_exists(&rgit_dir.join("objects"))?;
+            ensure_directory_exists(&rgit_dir.join("refs"))?;
+
+            writeln!(writer, "Repository initialized successfully.")?;
         }
+
         Command::Help => {
             writeln!(writer, "Rgit is a mock implementation of git in Rust")?;
-            writeln!(writer, "Usage [FLAGS] [ARGS]")?;
+            writeln!(writer, "Usage: rgit [COMMAND]")?;
         }
+
         Command::None => {}
     }
+
     Ok(())
+}
+
+fn ensure_directory_exists(dir: &Path) -> Result<(), RgitError> {
+    match fs::create_dir(dir) {
+        Ok(_) => Ok(()),
+
+        Err(err) => match err.kind() {
+            io::ErrorKind::AlreadyExists => Err(RgitError::DirectoryAlreadyExists),
+            io::ErrorKind::PermissionDenied => Err(RgitError::PermissionDenied),
+            _ => Err(RgitError::StorageFailure {
+                path: dir.to_path_buf(),
+                source: err,
+            }),
+        },
+    }
 }
