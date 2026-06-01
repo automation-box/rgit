@@ -1,7 +1,6 @@
-use std::fs;
+use std::fs::{self, File};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-use thiserror::Error;
 
 /// The distinct actions rgit can take.
 #[derive(Debug, PartialEq, Eq)]
@@ -19,7 +18,7 @@ pub struct CliConfig {
 }
 
 /// Top-level application errors.
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum RgitError {
     #[error("directory already exists")]
     DirectoryAlreadyExists,
@@ -86,6 +85,14 @@ where
             ensure_directory_exists(&rgit_dir)?;
             ensure_directory_exists(&rgit_dir.join("objects"))?;
             ensure_directory_exists(&rgit_dir.join("refs"))?;
+
+            let head_path = rgit_dir.join("HEAD");
+            fs::write(&head_path, "ref: refs/heads/main\n").map_err(|e| {
+                RgitError::StorageFailure {
+                    path: head_path,
+                    source: e,
+                }
+            })?;
 
             writeln!(writer, "Repository initialized successfully.")?;
         }
